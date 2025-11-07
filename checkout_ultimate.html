@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Geej Store ™</title>
+  <style>
+    /* Simple responsive layout and styles */
+    :root{
+      --accent:#6b5ce7;
+      --muted:#666;
+      --bg:#f7f7fb;
+      --card:#fff;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body{ margin:0; background:var(--bg); color:#111; }
+    header{ background:linear-gradient(90deg,#fff, #f1f1ff); padding:18px 24px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 1px 0 rgba(0,0,0,0.05); }
+    header h1{ margin:0; font-size:18px; letter-spacing:0.4px; display:flex; gap:10px; align-items:center;}
+    header .cart-btn{ background:var(--accent); color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; border:0;}
+    main{ max-width:980px; margin:28px auto; padding:0 18px; display:grid; grid-template-columns:1fr 320px; gap:20px; }
+    .product{ background:var(--card); border-radius:12px; padding:18px; box-shadow:0 6px 18px rgba(20,20,60,0.06); }
+    .product h2{ margin:0 0 8px 0; font-size:22px; }
+    .price{ font-weight:700; color:var(--accent); font-size:20px; margin:8px 0;}
+    .buy-row{ display:flex; gap:8px; align-items:center;}
+    .qty{ width:60px; padding:8px; border-radius:8px; border:1px solid #ddd; }
+    button.primary{ background:var(--accent); color:#fff; padding:10px 14px; border-radius:10px; border:0; cursor:pointer; }
+    .side{ position:sticky; top:28px; }
+    .cart{ background:var(--card); padding:14px; border-radius:12px; box-shadow:0 6px 12px rgba(10,10,30,0.05); }
+    .line{ display:flex; justify-content:space-between; padding:6px 0; color:var(--muted); }
+    .checkout-btn{ display:block; width:100%; margin-top:12px; padding:10px; border:0; border-radius:8px; cursor:pointer; background:#00b894; color:#fff; font-weight:600; }
+    /* modal */
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:50; }
+    .modal{ width:480px; max-width:94%; background:var(--card); padding:18px; border-radius:12px; }
+    .form-row{ display:flex; gap:8px; margin:8px 0; }
+    input, select, textarea{ width:100%; padding:10px; border-radius:8px; border:1px solid #e3e3e8; }
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    .small{ font-size:12px; color:var(--muted); margin-top:6px; }
+    .processing{ display:flex; gap:12px; align-items:center; }
+    .spinner{ width:36px; height:36px; border-radius:50%; border:5px solid #eee; border-top-color:var(--accent); animation:spin 1s linear infinite; }
+    @keyframes spin{ to{ transform:rotate(360deg);} }
+    .success{ text-align:center; padding:18px 6px; }
+    .order-id{ background:#f0f4ff; display:inline-block; padding:8px 12px; border-radius:8px; margin-top:12px; font-family:monospace; color:var(--accent); }
+    .muted{ color:var(--muted); font-size:13px; }
+    footer{ text-align:center; padding:20px; color:var(--muted); font-size:13px; }
+    .ghost{ background:#eee; border-radius:8px; padding:6px 10px; font-size:13px; color:#444; cursor:pointer; border:0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28'><rect rx='6' width='28' height='28' fill='%236b5ce7'/><text x='50%' y='55%' font-size='14' text-anchor='middle' fill='white' font-family='Arial' font-weight='700'>G</text></svg>" alt="" style="height:28px;border-radius:6px;">
+      Geej - Game Store
+    </h1>
+    <div>
+      <button class="cart-btn" id="open-cart">Cart (<span id="cart-count">0</span>)</button>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="product">
+        <h2>Geej: Ultimate Edition</h2>
+        <div class="price">$59.00 CAD</div>
+        <div class="buy-row" style="margin-top:10px;">
+          <label style="margin:0 8px 0 0;">
+            <div class="small">Quantity</div>
+            <input class="qty" type="number" id="qty" value="1" min="1" />
+          </label>
+          <button class="primary" id="add-to-cart">Add to cart</button>
+        </div>
+      </div>
+
+      <div style="height:14px;"></div>
+
+      <div class="product">
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="cart" id="cart">
+        <h3>Your Cart</h3>
+        <div id="cart-items">
+          <div class="muted">No items yet — add something!</div>
+        </div>
+        <div class="line" style="margin-top:12px;">
+          <div>Subtotal</div><div id="subtotal">$0.00</div>
+        </div>
+        <button class="checkout-btn" id="checkout" disabled>Checkout</button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal / checkout -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div id="checkout-step">
+        <h3>Checkout — Payment</h3>
+
+        <div style="margin-top:12px;">
+          <label>
+            <div class="small">Full name</div>
+            <input id="name" placeholder="Jane Example"/>
+          </label>
+          <div class="form-row">
+            <label style="flex:1">
+              <div class="small">Email (optional)</div>
+              <input id="email" placeholder="you@example.com"/>
+            </label>
+            <label style="flex:1">
+              <div class="small">Country</div>
+              <select id="country"><option>Canada</option><option>United States</option><option>United Kingdom</option></select>
+            </label>
+          </div>
+
+          <div style="margin-top:10px;">
+            <div class="small">payment info</div>
+            <input id="card" placeholder="Card number (e.g. 4242 4242 4242 4242)" />
+            <div class="form-row" style="margin-top:8px;">
+              <input id="exp" placeholder="MM/YY" />
+              <input id="cvc" placeholder="CVC" />
+            </div>
+          </div>
+
+          <div style="display:flex; gap:8px; margin-top:14px;">
+            <button class="primary" id="place-order">Place order</button>
+            <button class="ghost" id="cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="processing" style="display:none;">
+        <div class="processing">
+          <div class="spinner" aria-hidden="true"></div>
+          <div>
+            <div style="font-weight:700">Processing payment...</div>
+            <div class="muted">This will take a few seconds</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="success" style="display:none;">
+        <div class="success">
+          <h3>Order Confirmed</h3>
+          <p class="muted">Your order has been recorded. Thanks for Buying!</p>
+          <div class="order-id" id="order-id">#XXXX-XXXX</div>
+          <div style="margin-top:10px;">
+            <button class="ghost" id="copy-id">Copy order id</button>
+            <button class="primary" id="done" style="margin-left:8px;">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+  </footer>
+
+  <script>
+    // Simple cart state
+    const product = { id: 'hyper-ue', title: 'Geej: Ultimate Edition', price: 59.00 };
+    let cart = [];
+
+    // Helpers
+    const $ = sel => document.querySelector(sel);
+    const money = v => '$' + v.toFixed(2);
+
+    // UI refs
+    const cartItemsEl = $('#cart-items');
+    const subtotalEl = $('#subtotal');
+    const cartCountEl = $('#cart-count');
+    const checkoutBtn = $('#checkout');
+
+    function renderCart() {
+      if (cart.length === 0) {
+        cartItemsEl.innerHTML = '<div class="muted">No items yet — add something!</div>';
+        subtotalEl.textContent = money(0);
+        cartCountEl.textContent = '0';
+        checkoutBtn.disabled = true;
+        return;
+      }
+      cartItemsEl.innerHTML = '';
+      let subtotal = 0;
+      cart.forEach(item => {
+        subtotal += item.qty * item.price;
+        const div = document.createElement('div');
+        div.className = 'line';
+        div.innerHTML = '<div>' + item.title + ' × ' + item.qty + '</div><div>' + money(item.price * item.qty) + '</div>';
+        cartItemsEl.appendChild(div);
+      });
+      subtotalEl.textContent = money(subtotal);
+      cartCountEl.textContent = String(cart.reduce((s,i)=>s+i.qty,0));
+      checkoutBtn.disabled = false;
+    }
+
+    // Add to cart
+    $('#add-to-cart').addEventListener('click', () => {
+      const qty = Math.max(1, parseInt($('#qty').value || 1));
+      const existing = cart.find(c => c.id === product.id);
+      if (existing) existing.qty += qty;
+      else cart.push({ ...product, qty });
+      renderCart();
+      // brief UI nudge
+      $('#open-cart').animate([{ transform:'scale(1)' }, { transform:'scale(1.05)' }, { transform:'scale(1)'}], {duration:250});
+    });
+
+    // Open cart scroll or modal
+    $('#open-cart').addEventListener('click', () => window.scrollTo({ top: 0, behavior:'smooth' }));
+
+    // Checkout - open modal
+    checkoutBtn.addEventListener('click', () => {
+      if (cart.length === 0) return;
+      $('#modal').style.display = 'flex';
+      $('#checkout-step').style.display = 'block';
+      $('#processing').style.display = 'none';
+      $('#success').style.display = 'none';
+      // reset form
+      $('#name').value = '';
+      $('#email').value = '';
+      $('#card').value = '';
+      $('#exp').value = '';
+      $('#cvc').value = '';
+    });
+
+    // Cancel modal
+    $('#cancel').addEventListener('click', () => { $('#modal').style.display = 'none'; });
+
+    // Place order
+    $('#place-order').addEventListener('click', () => {
+      // Very light validation — only check name
+      const name = $('#name').value.trim();
+      if (!name) { alert('Enter a name for your receipt.'); return; }
+
+      // Proceed to processing screen
+      $('#checkout-step').style.display = 'none';
+      $('#processing').style.display = 'block';
+
+      // "Process" the payment for a couple of seconds
+      setTimeout(() => {
+        $('#processing').style.display = 'none';
+        $('#success').style.display = 'block';
+        const orderId = generateOrderId();
+        $('#order-id').textContent = orderId;
+        // You can clear the cart or keep it — we'll clear it after confirming
+      }, 1800 + Math.random() * 1600);
+    });
+
+    // Done: close and clear cart
+    $('#done').addEventListener('click', () => {
+      $('#modal').style.display = 'none';
+      cart = []; renderCart();
+    });
+
+    // Copy ID
+    $('#copy-id').addEventListener('click', async () => {
+      const id = $('#order-id').textContent;
+      if (navigator.clipboard) {
+        try { await navigator.clipboard.writeText(id); alert('Order ID copied: ' + id); }
+        catch(e){ prompt('Copy this order id:', id); }
+      } else {
+        prompt('Copy this order id:', id);
+      }
+    });
+
+    // Generate playful order id
+    function generateOrderId() {
+      const now = Date.now().toString(36).toUpperCase().slice(-6);
+      const r = Math.random().toString(36).slice(2,8).toUpperCase();
+      return '#ORDER-' + now + '-' + r.slice(0,4);
+    }
+
+    // close modal when clicking outside
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') $('#modal').style.display = 'none';
+    });
+
+    // initial render
+    renderCart();
+
+    // Accessibility note: for a prank, avoid real payment capture. If you ever wire a payment provider,
+    // use secure server-side tokenization and PCI-compliant flows.
+  </script>
+</body>
+</html>
